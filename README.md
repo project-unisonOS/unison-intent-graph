@@ -19,6 +19,10 @@ pip install -c ../constraints.txt -r requirements.txt
 PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 OTEL_SDK_DISABLED=true python -m pytest
 ```
 
+## Docs
+
+Full docs at https://project-unisonos.github.io
+
 ## Integration
 - Talks to `unison-context-graph` and `unison-orchestrator` per devstack wiring.
 - Health endpoints: `/health`, `/readyz`.
