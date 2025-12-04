@@ -26,6 +26,7 @@ Full docs at https://project-unisonos.github.io
 ## Integration
 - Talks to `unison-context-graph` and `unison-orchestrator` per devstack wiring.
 - Health endpoints: `/health`, `/readyz`.
+- Receives `caps.report` and `gesture.select` events from I/O and renderer layers.
 
 ## Architecture Snapshot
 - Receives intents/events from upstream clients (renderer/agent).
@@ -42,6 +43,9 @@ python src/main.py
 # Probe health
 curl http://localhost:8080/health
 
-# (When routing implemented) send intent
-curl -X POST http://localhost:8080/intent -d '{"intent":"echo","payload":{"message":"hi"}}' -H "Content-Type: application/json"
+# Caps report (from IO services)
+curl -X POST http://localhost:8080/caps/report -d '{"source":"io-core","caps":{"audio_in":{"present":true}}}' -H "Content-Type: application/json"
+
+# Touch/gesture selection (from renderer)
+curl -X POST http://localhost:8080/gesture/select -d '{"person_id":"local-user","card_id":"card-1","card_title":"Demo"}' -H "Content-Type: application/json"
 ```

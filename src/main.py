@@ -6,6 +6,7 @@ import logging
 app = FastAPI(title="unison-intent-graph")
 _caps_latest: Dict[str, Any] = {}
 _caps_updated_at: float | None = None
+_gesture_latest: Dict[str, Any] = {}
 logger = logging.getLogger("unison-intent-graph")
 
 
@@ -33,6 +34,27 @@ def caps_report(body: Dict[str, Any] = Body(...)):
 @app.get("/caps/latest")
 def caps_latest():
     return {"ok": True, "caps": _caps_latest, "updated_at": _caps_updated_at}
+
+
+@app.post("/gesture/select")
+def gesture_select(body: Dict[str, Any] = Body(...)):
+    """Record a simple touch/gesture selection event for downstream consumers."""
+    global _gesture_latest
+    now = time.time()
+    gesture = {
+        "person_id": body.get("person_id"),
+        "card_id": body.get("card_id"),
+        "card_title": body.get("card_title"),
+        "ts": now,
+    }
+    _gesture_latest = gesture
+    logger.info("gesture.select received (intent-graph): %s", gesture)
+    return {"ok": True, "stored": True, "ts": now}
+
+
+@app.get("/gesture/latest")
+def gesture_latest():
+    return {"ok": True, "gesture": _gesture_latest}
 
 
 if __name__ == "__main__":
