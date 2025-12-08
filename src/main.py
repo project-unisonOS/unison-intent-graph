@@ -2,12 +2,28 @@ from fastapi import FastAPI, Body
 from typing import Any, Dict
 import time
 import logging
+import os
+
+from neo4j import GraphDatabase, basic_auth
 
 app = FastAPI(title="unison-intent-graph")
 _caps_latest: Dict[str, Any] = {}
 _caps_updated_at: float | None = None
 _gesture_latest: Dict[str, Any] = {}
 logger = logging.getLogger("unison-intent-graph")
+
+GRAPH_URI = os.getenv("GRAPH_DB_URI")
+GRAPH_USER = os.getenv("GRAPH_DB_USER")
+GRAPH_PASSWORD = os.getenv("GRAPH_DB_PASSWORD")
+_GRAPH_DRIVER = None
+
+if GRAPH_URI and GRAPH_USER and GRAPH_PASSWORD:
+    try:
+        _GRAPH_DRIVER = GraphDatabase.driver(
+            GRAPH_URI, auth=basic_auth(GRAPH_USER, GRAPH_PASSWORD), max_connection_lifetime=60
+        )
+    except Exception:
+        _GRAPH_DRIVER = None
 
 
 @app.get("/health")
@@ -17,8 +33,16 @@ def health():
 
 @app.get("/readyz")
 def readyz():
-    # Mirror health endpoint so compose healthcheck succeeds
-    return {"status": "ready", "service": "unison-intent-graph"}
+    graph_ok = True
+    if _GRAPH_DRIVER:
+        try:
+            with _GRAPH_DRIVER.session() as session:
+                result = session.run("RETURN 1 as ok").single()
+                graph_ok = bool(result.get("ok"))
+        except Exception:
+            graph_ok = False
+    status = "ready" if graph_ok else "degraded"
+    return {"status": status, "service": "unison-intent-graph", "graph": graph_ok}
 
 
 @app.post("/caps/report")
