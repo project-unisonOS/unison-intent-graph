@@ -81,6 +81,37 @@ def gesture_latest():
     return {"ok": True, "gesture": _gesture_latest}
 
 
+@app.post("/graph/intent")
+def graph_intent(body: Dict[str, Any] = Body(...)):
+    """Record an intent instance linking person and agent/resource in Neo4j (best-effort)."""
+    if _GRAPH_DRIVER:
+        intent_id = body.get("intent_id") or f"intent-{int(time.time()*1000)}"
+        person_id = body.get("person_id")
+        agent_id = body.get("agent_id")
+        rel_type = body.get("rel_type", "HANDLES")
+        try:
+            with _GRAPH_DRIVER.session() as session:
+                session.run(
+                    """
+                    MERGE (i:IntentInstance {id:$intent_id})
+                    SET i.name=$name, i.created_at=timestamp()
+                    MERGE (p:Person {id:$person_id})
+                    MERGE (a:Agent {id:$agent_id})
+                    MERGE (p)-[:REQUESTED]->(i)
+                    MERGE (a)-[r:%s]->(i)
+                    SET r.created_at=timestamp()
+                    """
+                    % rel_type,
+                    intent_id=intent_id,
+                    person_id=person_id,
+                    agent_id=agent_id,
+                    name=body.get("name"),
+                )
+        except Exception as exc:
+            logger.warning("graph_intent error: %s", exc)
+    return {"ok": True}
+
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8080)
